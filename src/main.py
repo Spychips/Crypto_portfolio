@@ -1,6 +1,6 @@
-# ################################ #
-# GESTION DE PORTEFEUILLE CRYPTO
-# ################################ #
+# ################################## #
+# CHARGEMENT COURS ACTUEL DES CRYPTOS
+# ################################## #
 
 from bs4 import BeautifulSoup
 import requests
