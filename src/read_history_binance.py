@@ -5,7 +5,9 @@
 import pandas as pd
 import os
 import re
+import requests
 
+# Fonction pour split COIN et Transaction coin (Ex : ETHUSDT -> ETH et USDT)
 def extract_transaction_coin(value):
     transaction_coin = ['EUR', 'USD', 'USDT', 'BTC', 'ETH']
     for item in transaction_coin:
@@ -13,6 +15,7 @@ def extract_transaction_coin(value):
         coin = re.sub(r'{}'.format(pattern),"",value)
         if value != coin: break
     return coin, item
+
 
 path_to_file = r'C:\Users\ALEXIS\Downloads'
 filename = "Exporter l'historique des ordres récents.xls"
@@ -29,4 +32,11 @@ df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin
 
 df.sort_values(['Date','Coin']).reset_index(drop=True)
 
+# Récupération des prix actuels du marché
+dict_prices = {}
+for elem in df.Pair.unique():
+    print('Working on {}...'.format(elem))
+    json_response = requests.get('https://api.binance.com/api/v3/ticker/price?symbol={}'.format(elem)).json()
+    dict_prices[json_response['symbol']] = float(json_response['price'])
 
+df['Current_coin_price'] = df.Pair.map(dict_prices)
