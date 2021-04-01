@@ -1,0 +1,91 @@
+Metadata-Version: 2.1
+Name: bitcoinaverage
+Version: 0.2.1
+Summary: Library to integrate with the BitcoinAverage API
+Home-page: UNKNOWN
+Author: Blockchain Data LTD
+Author-email: info@bitcoinaverage.com
+License: UNKNOWN
+Description: # BitcoinAverage PIP Library
+        
+        Here we provide you 2 examples - the first example shows how to call function which makes a HTTP request to our Restful API and the other example connects to one of our websockets. You just need to enter your public_key and secret_key and you are ready to run this example.
+        
+        Official documentation: https://apiv2.bitcoinaverage.com
+        More examples on Github: https://github.com/bitcoinaverage/api-integration-examples/
+        
+        ## Http example
+        
+        ```
+        #!python
+        
+        from bitcoinaverage import RestfulClient
+        
+        if __name__ == '__main__':
+            public_key = 'your_public_key'
+            secret_key = 'your_secret_key'
+        
+            restful_client = RestfulClient(secret_key, public_key)
+        
+            ticker_global_per_symbol = restful_client.ticker_global_per_symbol('BTCUSD')
+            print('Global Ticker for BTCUSD:')
+            print(ticker_global_per_symbol)
+        ```
+        
+        ## Websocket V1 example
+        
+        ```
+        #!python
+        
+        from bitcoinaverage import TickerWebsocketClient
+        
+        if __name__ == '__main__':
+            public_key = 'your_public_key'
+            secret_key = 'your_secret_key'
+        
+            print('Connecting to the ticker websocket...')
+            ws = TickerWebsocketClient(public_key, secret_key)
+            ws.ticker_data('local', 'BTCUSD')
+        ```
+        
+        ## Websocket V2 examples
+        
+        Version 2 the websocket clients accept a list of cryptocurrencies and a list of exchange respectively.
+        They also use new optimized algorithm for quicker updates.
+        
+        
+        ### Ticker
+        
+        ```
+        #!python
+        
+        from bitcoinaverage import TickerWebsocketClientV2
+        
+        if __name__ == '__main__':
+            public_key = 'your_public_key'
+            secret_key = 'your_secret_key'
+        
+            print('Connecting to the ticker websocket...')
+            ws = TickerWebsocketClientV2(public_key, secret_key)
+            ws.ticker_data('local', ['BTCUSD', 'ETHUSD'])
+        ```
+        
+        ### Exchanges
+        
+        ```
+        #!python
+        
+        from bitcoinaverage import ExchangeWebsocketClientV2
+        
+        if __name__ == '__main__':
+            public_key = 'your_public_key'
+            secret_key = 'your_secret_key'
+        
+            print('Connecting to the exchange websocket...')
+            ws = ExchangeWebsocketClientV2(public_key, secret_key)
+            ws.ticker_data(['bitstamp', 'gdax'])
+        ```
+        
+        #### Copyright Blockchain Data LTD
+Keywords: bitcoinaverage,bitcoin,api
+Platform: UNKNOWN
+Description-Content-Type: text/markdown

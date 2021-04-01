@@ -16,6 +16,7 @@ path_to_data = os.path.join(path_to_project,'data')
 #Pour l'historique Binance
 binance_filename = "Exporter l'historique des ordres récents.xls"
 path_to_historical_binance = os.path.join(r'C:\Users\ALEXIS\Downloads',binance_filename)
+filename_history_binance_post_treatments = 'history_binance_post_treatments.xlsx'
 
 # Pour les prix ETH, BTC
 historical_prices_filename = 'historical_prices.txt'

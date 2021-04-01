@@ -45,5 +45,4 @@ df['USD_total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
 df.drop(['Total_price','Filled'],inplace=True, axis=1)
 
 # Enregistrement du fichier
-filename = 'history_binance_post_treatments.xlsx'
-df.to_excel(os.path.join(path_to_data,filename),index=False)
+df.to_excel(os.path.join(path_to_data,filename_history_binance_post_treatments),index=False)

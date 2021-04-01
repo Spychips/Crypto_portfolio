@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 import pandas as pd
 import re
-from openpyxl import load_workbook
+#from openpyxl import load_workbook
 
 coins, tokens, prices = [], [], []
 
