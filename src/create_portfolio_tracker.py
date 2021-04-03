@@ -12,5 +12,7 @@ df.sort_values(by=['Coin','Date'],inplace=True)
 # Calcul de la rentabilité
 
 """
-Le calcul doit se faire à chaque observation avec SELL 
+- Le calcul doit se faire à chaque observation avec SELL 
+- Ajouter ligne SELL quand échange COIN contre ETH ou BTC
 """
+

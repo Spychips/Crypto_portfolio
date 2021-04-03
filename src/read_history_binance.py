@@ -1,5 +1,5 @@
 # ################################## #
-# GESTION FICHIER HISTORIQUE BINANCE
+# GESTION FICHIER HISTORIQUE TRADING DE COINS BINANCE
 # ################################## #
 
 from src.util import *
@@ -18,16 +18,7 @@ df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
 df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin))
 df = df[df.Coin!='EUR']
 
-# Récupération des prix actuels du marché
-dict_prices = {}
-for elem in df.Pair.unique():
-    print('Working on {}...'.format(elem))
-    json_response = requests.get('https://api.binance.com/api/v3/ticker/price?symbol={}'.format(elem)).json()
-    dict_prices[json_response['symbol']] = float(json_response['price'])
-
-df['USD_current_coin_price'] = df.Pair.map(dict_prices)
 df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
-
 
 # Lecture de la table contenant les prix historiques ETH et BTC
 df_historical_prices = pd.read_csv(path_to_historical_prices,sep=';')
@@ -44,5 +35,24 @@ df = pd.concat([df[df.Transaction_coin.isin(['USDT','USD'])], df_filtered]).sort
 df['USD_total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
 df.drop(['Total_price','Filled'],inplace=True, axis=1)
 
+# # Récupération des prix actuels du marché
+# dict_prices = {}
+# for elem in df.Coin.unique():
+#     print('Working on {}...'.format(elem))
+#     json_response = requests.get('https://api.binance.com/api/v3/ticker/price?symbol={}'.format(elem+'USDT')).json()
+#     dict_prices[json_response['symbol'].replace('USDT','')] = float(json_response['price'])
+#
+# df['USD_current_coin_price'] = df.Coin.map(dict_prices)
+
 # Enregistrement du fichier
 df.to_excel(os.path.join(path_to_data,filename_history_binance_post_treatments),index=False)
+
+# #################################################### #
+# GESTION HISTORIQUE DES TRANSFERTS D'EUROS SUR BINANCE
+# #################################################### #
+
+df_deposits = pd.read_excel(path_to_deposits_binance,usecols=['Date(UTC)','Amount']).rename(columns={'Date(UTC)':'Date','Amount':'EUR_amount'})
+df_deposits['USDT_amount'] = float(requests.get('https://api.binance.com/api/v3/ticker/price?symbol=EURUSDT').json()['price'])*df_deposits['EUR_amount']
+
+# Enregistrement du fichier
+df_deposits.to_excel(os.path.join(path_to_data,filename_deposits_binance_post_treatments),index=False)
