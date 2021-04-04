@@ -1,42 +1,40 @@
-# ################################ #
-# GESTION DE PORTEFEUILLE CRYPTO
-# ################################ #
+# ############################################################ #
+# CONSTRUCTION DU FICHIER EXCEL DE SUIVI DU PORTEFEUILLE CRYPTO
+# avec mise en forme du fichier Excel et calculs d'agrégats
+# ############################################################ #
 
-from bs4 import BeautifulSoup
-import requests
 import pandas as pd
-import re
-from openpyxl import load_workbook
+from src.util import os, path_to_data, filename_history_binance_post_treatments, rolling_calculation
 
-coins, tokens, prices = [], [], []
+df = pd.read_excel(os.path.join(path_to_data, filename_history_binance_post_treatments))
 
-for i in range(1,3):
+# ################### #
+# Focus sur les achats
+# ################### #
 
-    print('Working on page {}...'.format(i))
-    url = 'https://www.coingecko.com/fr?page={}'.format(i)
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, 'html.parser')
+df_buy = df[df.Type=='BUY'].sort_values(['Coin','Date']).reset_index(drop=True)
 
-    extract_coins = soup.findAll("a", class_="d-none d-lg-flex font-bold align-items-center justify-content-between")
-    text_coin = [re.sub("\n", "", elem.text) for elem in extract_coins]
-    coins.append(text_coin)
+#Calcul du prix moyen d'achat
+_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='USD_total_price')
+_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
+df_buy['AvgPrice_Buy'] = df_buy['USD_total_price_roll_sum']/df_buy['Nb_tokens_roll_sum']
+df_buy.drop(['USD_total_price_roll_sum','Nb_tokens_roll_sum'],axis=1,inplace=True) #suppression des champs intermédiaires
 
-    extract_tokens = soup.findAll("span", class_="d-none d-lg-inline font-normal text-3xs ml-2")
-    text_token = [re.sub("\n", "", elem.text) for elem in extract_tokens]
-    tokens.append(text_token)
+# ################### #
+# Focus sur les ventes
+# ################### #
 
-    extract_prices = soup.findAll("td", class_="td-price price text-right")
-    text_prices = [float(re.sub("\n", "", elem.text).replace(" ", "").replace("$", "").replace(",", ".")) for elem in extract_prices]
-    prices.append(text_prices)
+df_sell = df[df.Type=='BUY'].sort_values(['Coin','Date']).reset_index(drop=True)
 
-df_crypto_cours = pd.DataFrame({'Coin':sum(coins,[]), 'Token':sum(tokens,[]), 'Price_US$':sum(prices,[])})
+#Calcul du prix moyen de vente
+_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='USD_total_price')
+_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
+df_sell['AvgPrice_Sell'] = df_sell['USD_total_price_roll_sum']/df_sell['Nb_tokens_roll_sum']
+df_sell.drop(['USD_total_price_roll_sum','Nb_tokens_roll_sum'],axis=1,inplace=True) #suppression des champs intermédiaires
 
-# book = load_workbook('Portfolio.xlsx')
-# writer = pd.ExcelWriter('Portfolio.xlsx', engine='openpyxl')
-# writer.book = book
-#
-# writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
-#
-# df_crypto_cours.to_excel(writer, "Cours")
-#
-# writer.save()
+# Calcul de la rentabilité
+
+"""
+- Le calcul doit se faire à chaque observation avec SELL 
+- Ajouter ligne SELL quand échange COIN contre ETH ou BTC
+"""

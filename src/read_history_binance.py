@@ -45,7 +45,7 @@ df.drop(['Total_price','Filled'],inplace=True, axis=1)
 # df['USD_current_coin_price'] = df.Coin.map(dict_prices)
 
 # Enregistrement du fichier
-df.to_excel(os.path.join(path_to_data,filename_history_binance_post_treatments),index=False)
+export_file(df, path_to_data, filename_history_binance_post_treatments)
 
 # #################################################### #
 # GESTION HISTORIQUE DES TRANSFERTS D'EUROS SUR BINANCE
@@ -55,4 +55,4 @@ df_deposits = pd.read_excel(path_to_deposits_binance,usecols=['Date(UTC)','Amoun
 df_deposits['USDT_amount'] = float(requests.get('https://api.binance.com/api/v3/ticker/price?symbol=EURUSDT').json()['price'])*df_deposits['EUR_amount']
 
 # Enregistrement du fichier
-df_deposits.to_excel(os.path.join(path_to_data,filename_deposits_binance_post_treatments),index=False)
+export_file(df_deposits, path_to_data, filename_deposits_binance_post_treatments)
