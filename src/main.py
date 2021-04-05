@@ -20,9 +20,7 @@ date_jour = date.today().strftime('%Y%m%d')
 # ########################################################################### #
 
 print('\n==========================================')
-print('\n')
 print('IMPORT DU TEMPLATE')
-print('\n')
 print('==========================================\n')
 
 book = load_workbook(os.path.join(path_to_data,filename_template_excel))
@@ -219,6 +217,11 @@ A REVOIR POUR LA SUITE
 df_report['Tokens_solde'] = df_report['Nb_tokens_buy_tot'] - df_report['Nb_tokens_sell_tot']
 df_report['USD_Total_Bought'] = df_report['AvgPrice_buy']*df_report['Nb_tokens_buy_tot']
 df_report['USD_Total_Sold'] = df_report['AvgPrice_sell']*df_report['Nb_tokens_sell_tot']
+
+colums_to_keep = ['Coin', 'Tokens_solde', 'AvgPrice_buy', 'Nb_tokens_buy_tot', 'USD_Total_Bought', 'Date_min_buy', 'Date_max_buy', 'AvgPrice_sell',
+ 'Nb_tokens_sell_tot', 'USD_Total_Sold', 'Date_min_sell', 'Date_max_sell']
+
+df_report[colums_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
 
 # ########################################################################### #
 # Enregistrement du fichier Excel

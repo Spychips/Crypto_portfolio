@@ -23,16 +23,38 @@ df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin
 df = df[df.Coin!='EUR']
 
 df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
+df['Fake_transaction'] = False
+
+#Ajout de "fake" transactions pour les transactions avec Transaction_coin <> USD, USDT
+df_not_usd = df[df.Transaction_coin!='USDT'].copy()
+df_not_usd['Date'] = df_not_usd['Date'] - pd.Timedelta(1,unit='s')
+df_not_usd['Pair'] = df_not_usd['Transaction_coin']+'USDT'
+df_not_usd['Coin'] = df_not_usd['Transaction_coin']
+df_not_usd['Transaction_coin'] = 'USDT'
+df_not_usd['Type'] = 'SELL'
+df_not_usd['Fake_transaction'] = True
+df_not_usd['Nb_tokens'], df_not_usd['Filled'] = df_not_usd['Total_price'], df_not_usd['Total_price']
+df_not_usd['Price_coin'], df_not_usd['Total_price'] = np.NaN, np.NaN
+
+df = pd.concat([df,df_not_usd],axis=0).sort_values(['Date','Coin']).reset_index(drop=True)
 
 # Lecture de la table contenant les prix historiques ETH et BTC
 df_historical_prices = pd.read_csv(path_to_historical_prices,sep=';')
 df_historical_prices['Date'] = pd.to_datetime(df_historical_prices['Date'],format='%Y-%m-%d %H:%M:%S')
 
-# Filtre sur les opérations effectuées hors USD et USDT
+# Filtre sur les achats faits en BTC, ETH ou BNB
 df_filtered = df[~df.Transaction_coin.isin(['USDT','USD'])]
 df_filtered = pd.merge(df_filtered,df_historical_prices,on=['Date','Transaction_coin'],how='left')
 df_filtered['USD_price_per_coin'] = df_filtered['USD_price']*df_filtered['Price_coin']
 del df_filtered['USD_price']
+
+# Travail sur les "fake" transactions (pour gérer les achats en ETH, BTC, BNB)
+df_filtered_fake = df[df.Fake_transaction]
+del df_filtered_fake['USD_price_per_coin']
+df_filtered_fake = pd.merge(df_filtered_fake,df_historical_prices.rename(columns={'Transaction_coin':'Coin','USD_price':'USD_price_per_coin'})
+                            ,left_on=['Date','Coin'], right_on=['Date','Coin'],how='left')
+df_filtered_fake['Total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
+df_filtered_fake['Price_coin'] = df['USD_price_per_coin']
 
 # On réintègre les données dans le dataframe df
 df = pd.concat([df[df.Transaction_coin.isin(['USDT','USD'])], df_filtered]).sort_values(['Date','Coin']).reset_index(drop=True)
@@ -105,7 +127,7 @@ df_tot = df_tot.groupby('Coin').fillna(method='ffill')
 df_tot['Current_price'] = '=RECHERCHEV(@F:F&"USDT";Cours_Cryptos!A:C;3;FAUX)'
 
 # --------------------------------------------------------------------------- #
-# Enregistrement dans l'onglet
+# Travail sur les observations avec transaction_coin <> USD, USDT
 # --------------------------------------------------------------------------- #
 
-df.to_excel(writer,sheetname_historique_transactions,startcol=0,startrow=2,index=False,header=False)
+df_not_usd = df_tot[df_tot.Transaction_coin!='USDT']
