@@ -214,11 +214,21 @@ df_report = df_tot[colums_to_keep].groupby('Coin').tail(1)
 A REVOIR POUR LA SUITE 
 """
 
-df_report['Tokens_solde'] = df_report['Nb_tokens_buy_tot'] - df_report['Nb_tokens_sell_tot']
+df_report['Tokens_solde'] = np.where(df_report['Nb_tokens_sell_tot'].notnull(), df_report['Nb_tokens_buy_tot'] - df_report['Nb_tokens_sell_tot'], df_report['Nb_tokens_buy_tot'])
 df_report['USD_Total_Bought'] = df_report['AvgPrice_buy']*df_report['Nb_tokens_buy_tot']
 df_report['USD_Total_Sold'] = df_report['AvgPrice_sell']*df_report['Nb_tokens_sell_tot']
 
-colums_to_keep = ['Coin', 'Tokens_solde', 'AvgPrice_buy', 'Nb_tokens_buy_tot', 'USD_Total_Bought', 'Date_min_buy', 'Date_max_buy', 'AvgPrice_sell',
+#Ajout price actuel + évolution sur 24h
+df_report['temp'] = df_report['Coin']+'USDT'
+df_report = pd.merge(df_report, df_binance_cryptos[['Pair','PriceChange24hr','CurrentPrice']],left_on='temp', right_on='Pair')
+df_report.drop(['Pair','temp'],axis=1,inplace=True)
+
+df_report['Investissement'] = df_report['AvgPrice_buy']*df_report['Nb_tokens_buy_tot']
+df_report['Tokens_solde_current_usd'] = df_report['Nb_tokens_buy_tot']*df_report['CurrentPrice'] #valeur actuelle du solde
+
+# df_report['Plus_value'] = df_report['Investissement'] - df_report['']
+
+colums_to_keep = ['Coin', 'Tokens_solde', 'Investissement', 'Tokens_solde_current_usd', 'CurrentPrice', 'PriceChange24hr', 'AvgPrice_buy', 'Nb_tokens_buy_tot', 'USD_Total_Bought', 'Date_min_buy', 'Date_max_buy', 'AvgPrice_sell',
  'Nb_tokens_sell_tot', 'USD_Total_Sold', 'Date_min_sell', 'Date_max_sell']
 
 df_report[colums_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
