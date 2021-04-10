@@ -199,7 +199,7 @@ del df['temp']
 # Enregistrement dans l'onglet
 # --------------------------------------------------------------------------- #
 
-details_cols = ['Date', 'Pair', 'Type', 'Coin', 'Transaction_coin']
+details_cols = ['Date', 'Coin', 'Type', 'Pair', 'Transaction_coin']
 details_achats_cols = ['Quantite_achetee', 'Prix_achat', 'Montant_achat']
 details_ventes_cols = ['Quantite_vendue', 'Prix_vente', 'Montant_vente']
 achats_agg_cols = ['Quantite_achetee_totale', 'Montant_achat_total', 'Prix_moyen_achat', 'Nombre_achats']
