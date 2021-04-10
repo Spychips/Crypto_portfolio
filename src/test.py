@@ -98,7 +98,7 @@ df = pd.read_excel(path_to_historical_binance)\
         .rename(columns={'Date(UTC)':'Date','Order Amount':'Nb_tokens', 'AvgTrading Price':'Price_coin',\
                          'Total':'Total_price'})
 df.drop(['Order Price','status'],axis=1,inplace=True)
-df = df[df['Date'].notnull()]
+df = df[(df['Date'].notnull()) & (df['Filled']!=0)]
 df[['Nb_tokens','Price_coin']] = df[['Nb_tokens','Price_coin']].astype(float)
 
 df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
@@ -122,120 +122,53 @@ df = pd.concat([df[df.Transaction_coin.isin(['USDT','USD'])], df_filtered]).sort
 df['USD_total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
 df.drop(['Total_price','Filled'],inplace=True, axis=1)
 
-# --------------------------------------------------------------------------- #
-# Calcul
-# --------------------------------------------------------------------------- #
+cols = ['Date','Coin','Type', 'Nb_tokens', 'USD_price_per_coin', 'USD_total_price']
+test = df[cols][df.Coin.isin(['ADA'])]
 
-# Focus sur les achats
-# --------------------#
+test['temp'] = test.groupby(['Coin','Type']).cumcount()+1
+test['ID'] = np.where(test.Type=='BUY', 'Achat_'+test['temp'].astype(str), 'Vente_'+test['temp'].astype(str))
+test['Nombre_achats'] = np.where(test.Type=='BUY', test['temp'], None)
+test['Nombre_achats'] = test['Nombre_achats'].fillna(method='ffill').astype(np.int16)
+test['Nombre_ventes'] = np.where(test.Type=='SELL', test['temp'], None)
+test['Nombre_ventes'] = test['Nombre_ventes'].fillna(method='ffill').fillna(0).astype(np.int16)
+del test['temp']
 
-df_buy = df[df.Type=='BUY'].sort_values(['Coin','Date']).reset_index(drop=True)
-
-#Calcul du prix moyen d'achat
-_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='USD_total_price')
-_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
-df_buy['AvgPrice_buy'] = df_buy['USD_total_price_roll_sum']/df_buy['Nb_tokens_roll_sum']
-df_buy.drop(['USD_total_price_roll_sum','Nb_tokens_roll_sum'],axis=1,inplace=True) #suppression des champs intermédiaires
-
-# Quantité achetée
-_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
-df_buy.rename(columns={'Nb_tokens_roll_sum':'Nb_tokens_buy_tot'},inplace=True)
-
-# Date min d'achat de la crypto
-df_buy['Date_temp'] = df_buy.Date.values.astype(np.int64)
-_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='min', rolling_delta_str='360d', var_str='Date_temp')
-df_buy['Date_min_buy'] = pd.to_datetime(df_buy['Date_temp_roll_min'])
-
-# Date max d'achat de la crypto
-df_buy['Date_temp'] = df_buy.Date.values.astype(np.int64)
-_, df_buy = rolling_calculation(df_Init=df_buy, index_str='Date', var_group_str='Coin', agg_str='max', rolling_delta_str='360d', var_str='Date_temp')
-df_buy['Date_max_buy'] = pd.to_datetime(df_buy['Date_temp_roll_max'])
-
-df_buy.drop(['Date_temp','Date_temp_roll_min','Date_temp_roll_max'],axis=1,inplace=True)
-
-# Focus sur les achats
-# --------------------#
-
-df_sell = df[df.Type=='SELL'].sort_values(['Coin','Date']).reset_index(drop=True)
-
-#Calcul du prix moyen de vente
-_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='USD_total_price')
-_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
-df_sell['AvgPrice_sell'] = df_sell['USD_total_price_roll_sum']/df_sell['Nb_tokens_roll_sum']
-df_sell.drop(['USD_total_price_roll_sum','Nb_tokens_roll_sum'],axis=1,inplace=True) #suppression des champs intermédiaires
-
-# Quantité vendue
-_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='sum', rolling_delta_str='360d', var_str='Nb_tokens')
-df_sell.rename(columns={'Nb_tokens_roll_sum':'Nb_tokens_sell_tot'},inplace=True)
-
-# Date min d'achat de la crypto
-df_sell['Date_temp'] = df_sell.Date.values.astype(np.int64)
-_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='min', rolling_delta_str='360d', var_str='Date_temp')
-df_sell['Date_min_sell'] = pd.to_datetime(df_sell['Date_temp_roll_min'])
-
-# Date max de vente de la crypto
-df_sell['Date_temp'] = df_sell.Date.values.astype(np.int64)
-_, df_sell = rolling_calculation(df_Init=df_sell, index_str='Date', var_group_str='Coin', agg_str='max', rolling_delta_str='360d', var_str='Date_temp')
-df_sell['Date_max_sell'] = pd.to_datetime(df_sell['Date_temp_roll_max'])
-
-df_sell.drop(['Date_temp','Date_temp_roll_min','Date_temp_roll_max'],axis=1,inplace=True)
-
-# Concaténation
-# --------------------#
-
-df_tot = pd.concat([df_buy,df_sell],axis=0).sort_values(by=['Date','Coin','Type']).reset_index(drop=True)
-df_tot = df_tot.set_index('Coin').groupby('Coin').fillna(method='ffill').reset_index()
-# df_tot['Current_price'] = '=RECHERCHEV(@F:F&"USDT";Cours_Cryptos!A:C;3;FAUX)'
-
-# --------------------------------------------------------------------------- #
-# Enregistrement dans l'onglet
-# --------------------------------------------------------------------------- #
-
-colnames = ['Date', 'Pair', 'Type', 'Coin', 'Nb_tokens', 'Price_coin',
-            'Transaction_coin', 'USD_price_per_coin', 'USD_total_price',
-            'AvgPrice_buy', 'Nb_tokens_buy_tot', 'Date_min_buy', 'Date_max_buy',
-            'AvgPrice_sell', 'Nb_tokens_sell_tot', 'Date_min_sell', 'Date_max_sell']
-
-df_tot = df_tot[colnames]
-
-df_tot.to_excel(writer,sheetname_historique_transactions,startcol=0,startrow=2,index=False,header=False)
-
-# ########################################################################### #
-# Onglet Report
-# ########################################################################### #
-
-colums_to_keep = ['Coin','AvgPrice_buy', 'Nb_tokens_buy_tot',
-            'Date_min_buy', 'Date_max_buy', 'AvgPrice_sell', 'Nb_tokens_sell_tot', 'Date_min_sell', 'Date_max_sell']
-
-df_report = df_tot[colums_to_keep].groupby('Coin').tail(1)
+test['Quantite_achetee'] = np.where(test.Type=='BUY', test.Nb_tokens, np.NaN)
+test['Quantite_vendue'] = np.where(test.Type=='SELL', test.Nb_tokens, np.NaN)
+test['Prix_achat'] = np.where(test.Type=='BUY', test.USD_price_per_coin, np.NaN)
+test['Prix_vente'] = np.where(test.Type=='SELL', test.USD_price_per_coin, np.NaN)
+test['Montant_achat'] = np.where(test.Type=='BUY', test.USD_total_price, np.NaN)
+test['Montant_vente'] = np.where(test.Type=='SELL', test.USD_total_price, np.NaN)
 
 
-"""
-A REVOIR POUR LA SUITE 
-"""
 
-df_report['Tokens_solde'] = np.where(df_report['Nb_tokens_sell_tot'].notnull(), df_report['Nb_tokens_buy_tot'] - df_report['Nb_tokens_sell_tot'], df_report['Nb_tokens_buy_tot'])
-df_report['USD_Total_Bought'] = df_report['AvgPrice_buy']*df_report['Nb_tokens_buy_tot']
-df_report['USD_Total_Sold'] = df_report['AvgPrice_sell']*df_report['Nb_tokens_sell_tot']
+test.drop(['Nb_tokens', 'USD_price_per_coin', 'USD_total_price', 'Type'], axis=1, inplace=True)
 
-#Ajout price actuel + évolution sur 24h
-df_report['temp'] = df_report['Coin']+'USDT'
-df_report = pd.merge(df_report, df_binance_cryptos[['Pair','PriceChange24hr','CurrentPrice']],left_on='temp', right_on='Pair')
-df_report.drop(['Pair','temp'],axis=1,inplace=True)
 
-df_report['Investissement'] = df_report['AvgPrice_buy']*df_report['Nb_tokens_buy_tot']
-df_report['Tokens_solde_current_usd'] = df_report['Nb_tokens_buy_tot']*df_report['CurrentPrice'] #valeur actuelle du solde
 
-# df_report['Plus_value_vente'] = df_report['USD_Total_Bought'] - df_report['USD_Total_Sold']
 
-colums_to_keep = ['Coin', 'Tokens_solde', 'Investissement', 'Tokens_solde_current_usd', 'CurrentPrice', 'PriceChange24hr', 'AvgPrice_buy', 'Nb_tokens_buy_tot', 'USD_Total_Bought', 'Date_min_buy', 'Date_max_buy', 'AvgPrice_sell',
- 'Nb_tokens_sell_tot', 'USD_Total_Sold', 'Date_min_sell', 'Date_max_sell']
 
-df_report[colums_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
 
-# ########################################################################### #
-# Enregistrement du fichier Excel
-# ########################################################################### #
+test['Quantite_achetee_totale'] = test.groupby('Coin').Quantite_achetee.cumsum()
+test['Quantite_achetee_totale'] = test.groupby('Coin').Quantite_achetee_totale.fillna(method='ffill')
 
-if __name__ == '__main__':
-    writer.save()
+test['Quantite_vendue_totale'] = test.groupby('Coin').Quantite_vendue.cumsum()
+test['Quantite_vendue_totale'] = test.groupby('Coin').Quantite_vendue_totale.fillna(method='ffill').fillna(0)
+
+test['Quantite_possedee_totale'] = test['Quantite_achetee_totale'] - test['Quantite_vendue_totale']
+
+test['Montant_achat_total'] = test.groupby('Coin').Montant_achat.cumsum()
+test['Montant_achat_total'] = test.groupby('Coin').Montant_achat.fillna(method='ffill')
+
+test['Montant_vente_total'] = test.groupby('Coin').Montant_vente.cumsum()
+test['Montant_vente_total'] = test.groupby('Coin').Montant_vente_total.fillna(method='ffill').fillna(0)
+
+# test['Solde_total_en_montant'] = test['Montant_achat_total'] - test['Montant_vente_total']
+
+test['Prix_moyen_achat'] = test['Montant_achat_total']/test['Quantite_achetee_totale']
+test['Prix_moyen_vente'] = test['Montant_vente_total']/test['Quantite_vendue_totale']
+test.drop(['Quantite_achetee', 'Quantite_vendue', 'Prix_achat', 'Prix_vente', 'Montant_achat', 'Montant_vente', 'Montant_achat_total',
+           'Montant_vente_total'], axis=1, inplace=True)
+
+test['Plus_value_vente'] = test['Quantite_achetee_totale']*test['Prix_moyen_achat'] - test['Quantite_vendue_totale']*test['Prix_moyen_vente']
+
