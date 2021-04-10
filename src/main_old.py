@@ -105,6 +105,20 @@ df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
 df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin))
 df = df[df.Coin!='EUR']
 
+#Ajout de "fake" transactions pour les transactions avec Transaction_coin <> USD, USDT
+df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
+df['Fake_transaction'] = False
+df_not_usd = df[df.Transaction_coin!='USDT'].copy()
+df_not_usd['Date'] = df_not_usd['Date'] - pd.Timedelta(1,unit='s')
+df_not_usd['Pair'] = df_not_usd['Transaction_coin']+'USDT'
+df_not_usd['Coin'] = df_not_usd['Transaction_coin']
+df_not_usd['Transaction_coin'] = 'USDT'
+df_not_usd['Type'] = 'SELL'
+df_not_usd['Fake_transaction'] = True
+df_not_usd['Nb_tokens'], df_not_usd['Filled'] = df_not_usd['Total_price'], df_not_usd['Total_price']
+df_not_usd['Price_coin'], df_not_usd['Total_price'] = np.NaN, np.NaN
+df = pd.concat([df,df_not_usd],axis=0).sort_values(['Date','Coin']).reset_index(drop=True)
+
 df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
 
 # Lecture de la table contenant les prix historiques ETH et BTC

@@ -105,6 +105,20 @@ df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
 df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin))
 df = df[df.Coin!='EUR']
 
+# #Ajout de "fake" transactions pour les transactions avec Transaction_coin <> USD, USDT
+# df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
+# df['Fake_transaction'] = False
+# df_not_usd = df[df.Transaction_coin!='USDT'].copy()
+# df_not_usd['Date'] = df_not_usd['Date'] - pd.Timedelta(1,unit='s')
+# df_not_usd['Pair'] = df_not_usd['Transaction_coin']+'USDT'
+# df_not_usd['Coin'] = df_not_usd['Transaction_coin']
+# df_not_usd['Transaction_coin'] = 'USDT'
+# df_not_usd['Type'] = 'SELL'
+# df_not_usd['Fake_transaction'] = True
+# df_not_usd['Nb_tokens'], df_not_usd['Filled'] = df_not_usd['Total_price'], df_not_usd['Total_price']
+# df_not_usd['Price_coin'], df_not_usd['Total_price'] = np.NaN, np.NaN
+# df = pd.concat([df,df_not_usd],axis=0).sort_values(['Date','Coin']).reset_index(drop=True)
+
 df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
 
 # Lecture de la table contenant les prix historiques ETH et BTC
@@ -116,6 +130,15 @@ df_filtered = df[~df.Transaction_coin.isin(['USDT','USD'])]
 df_filtered = pd.merge(df_filtered,df_historical_prices,on=['Date','Transaction_coin'],how='left')
 df_filtered['USD_price_per_coin'] = df_filtered['USD_price']*df_filtered['Price_coin']
 del df_filtered['USD_price']
+
+# # Travail sur les "fake" transactions (pour gérer les achats en ETH, BTC, BNB)
+# df_filtered_fake = df[df.Fake_transaction]
+# del df_filtered_fake['USD_price_per_coin']
+# df_filtered_fake = pd.merge(df_filtered_fake,df_historical_prices.rename(columns={'Transaction_coin':'Coin','USD_price':'USD_price_per_coin'})
+#                             ,left_on=['Date','Coin'], right_on=['Date','Coin'],how='left')
+# df_filtered_fake['Total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
+# df_filtered_fake['Price_coin'] = df['USD_price_per_coin']
+
 
 # On réintègre les données dans le dataframe df
 df = pd.concat([df[df.Transaction_coin.isin(['USDT','USD'])], df_filtered]).sort_values(['Date','Coin']).reset_index(drop=True)
@@ -181,7 +204,7 @@ del df['temp']
 # Enregistrement dans l'onglet
 # --------------------------------------------------------------------------- #
 
-details_cols = ['Date', 'Pair', 'Type', 'Coin', 'Transaction_coin']
+details_cols = ['Date', 'Coin', 'Type', 'Pair', 'Transaction_coin']
 details_achats_cols = ['Quantite_achetee', 'Prix_achat', 'Montant_achat']
 details_ventes_cols = ['Quantite_vendue', 'Prix_vente', 'Montant_vente']
 achats_agg_cols = ['Quantite_achetee_totale', 'Montant_achat_total', 'Prix_moyen_achat', 'Nombre_achats']
@@ -211,9 +234,9 @@ df_agg['Variation_qt_possedee'] = df_agg['Valeur_actuelle_qte_possedee'] - df_ag
 df_agg['Variation_qt_possedee_%'] = 100*(df_agg['Valeur_actuelle_qte_possedee'] - df_agg['Cout_qt_possedee'])/df_agg['Cout_qt_possedee']
 
 var_to_keep = ['Coin', 'Variation_qt_possedee','Variation_qt_possedee_%', 'Plus_value_vente_en_$', 'CurrentPrice', 'PriceChange24hr',
-               'Quantite_possedee_totale', 'Prix_moyen_achat', 'Prix_moyen_vente', 'Nombre_achats', 'Nombre_ventes']
+               'Prix_moyen_achat', 'Prix_moyen_vente', 'Quantite_possedee_totale', 'Nombre_achats', 'Nombre_ventes']
 
-df_agg[var_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
+df_agg[var_to_keep].sort_values('Variation_qt_possedee',ascending=False).to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
 
 # ########################################################################### #
 # Enregistrement du fichier Excel
