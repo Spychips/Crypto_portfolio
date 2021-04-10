@@ -120,19 +120,21 @@ del df_filtered['USD_price']
 # On réintègre les données dans le dataframe df
 df = pd.concat([df[df.Transaction_coin.isin(['USDT','USD'])], df_filtered]).sort_values(['Date','Coin']).reset_index(drop=True)
 df['USD_total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
-df.drop(['Total_price','Filled'],inplace=True, axis=1)
 
-cols = ['Date','Coin','Type', 'Nb_tokens', 'USD_price_per_coin', 'USD_total_price']
-test = df[cols][df.Coin.isin(['ADA'])]
+var_to_keep = ['Date','Coin','Type', 'Nb_tokens', 'USD_price_per_coin', 'USD_total_price']
+# df = df[var_to_keep]
 
-test['temp'] = test.groupby(['Coin','Type']).cumcount()+1
-test['ID'] = np.where(test.Type=='BUY', 'Achat_'+test['temp'].astype(str), 'Vente_'+test['temp'].astype(str))
+test = df[df.Coin.isin(['ADA','THETA', 'UNI', 'STMX'])].sort_values(['Coin','Date'])
+
+# Calcul du nombre d'achats / ventes
+test['temp'] = test.groupby(['Coin','Type']).cumcount()+1 #var temporaire
 test['Nombre_achats'] = np.where(test.Type=='BUY', test['temp'], None)
-test['Nombre_achats'] = test['Nombre_achats'].fillna(method='ffill').astype(np.int16)
+test['Nombre_achats'] = test.groupby('Coin')['Nombre_achats'].fillna(method='ffill').astype(np.int16)
 test['Nombre_ventes'] = np.where(test.Type=='SELL', test['temp'], None)
-test['Nombre_ventes'] = test['Nombre_ventes'].fillna(method='ffill').fillna(0).astype(np.int16)
+test['Nombre_ventes'] = test.groupby('Coin')['Nombre_ventes'].fillna(method='ffill').fillna(0).astype(np.int16)
 del test['temp']
 
+# On slipt en deux types de champs pour distinguer les ventes des achats
 test['Quantite_achetee'] = np.where(test.Type=='BUY', test.Nb_tokens, np.NaN)
 test['Quantite_vendue'] = np.where(test.Type=='SELL', test.Nb_tokens, np.NaN)
 test['Prix_achat'] = np.where(test.Type=='BUY', test.USD_price_per_coin, np.NaN)
@@ -140,35 +142,39 @@ test['Prix_vente'] = np.where(test.Type=='SELL', test.USD_price_per_coin, np.NaN
 test['Montant_achat'] = np.where(test.Type=='BUY', test.USD_total_price, np.NaN)
 test['Montant_vente'] = np.where(test.Type=='SELL', test.USD_total_price, np.NaN)
 
-
-
+# Suppression de champs
 test.drop(['Nb_tokens', 'USD_price_per_coin', 'USD_total_price', 'Type'], axis=1, inplace=True)
 
-
-
-
-
-
+# Quantité achetée totale jusqu'à date
 test['Quantite_achetee_totale'] = test.groupby('Coin').Quantite_achetee.cumsum()
 test['Quantite_achetee_totale'] = test.groupby('Coin').Quantite_achetee_totale.fillna(method='ffill')
 
+# Quantité vendue totale jusqu'à date
 test['Quantite_vendue_totale'] = test.groupby('Coin').Quantite_vendue.cumsum()
 test['Quantite_vendue_totale'] = test.groupby('Coin').Quantite_vendue_totale.fillna(method='ffill').fillna(0)
 
+# Quantité possédée totale jusqu'à date
 test['Quantite_possedee_totale'] = test['Quantite_achetee_totale'] - test['Quantite_vendue_totale']
 
+# Quantité totale achetée (exprimée en $)
 test['Montant_achat_total'] = test.groupby('Coin').Montant_achat.cumsum()
-test['Montant_achat_total'] = test.groupby('Coin').Montant_achat.fillna(method='ffill')
+test['Montant_achat_total'] = test.groupby('Coin').Montant_achat_total.fillna(method='ffill').fillna(0)
 
+# Quantité totale vendue (exprimée en $)
 test['Montant_vente_total'] = test.groupby('Coin').Montant_vente.cumsum()
 test['Montant_vente_total'] = test.groupby('Coin').Montant_vente_total.fillna(method='ffill').fillna(0)
 
-# test['Solde_total_en_montant'] = test['Montant_achat_total'] - test['Montant_vente_total']
-
+# Prix moyens
 test['Prix_moyen_achat'] = test['Montant_achat_total']/test['Quantite_achetee_totale']
 test['Prix_moyen_vente'] = test['Montant_vente_total']/test['Quantite_vendue_totale']
-test.drop(['Quantite_achetee', 'Quantite_vendue', 'Prix_achat', 'Prix_vente', 'Montant_achat', 'Montant_vente', 'Montant_achat_total',
-           'Montant_vente_total'], axis=1, inplace=True)
 
-test['Plus_value_vente'] = test['Quantite_achetee_totale']*test['Prix_moyen_achat'] - test['Quantite_vendue_totale']*test['Prix_moyen_vente']
+# Calcul de la plus value réalisée en vendant
+test['temp'] = ((test['Prix_vente'] - test['Prix_moyen_achat'])*test['Quantite_vendue'])
+test['Plus_value_vente_en_$'] = test.groupby('Coin')['temp'].cumsum().fillna(method='ffill').fillna(0)
+del test['temp']
+
+# Suppression de champs
+test.drop(['Quantite_achetee', 'Quantite_vendue', 'Prix_achat', 'Prix_vente', 'Montant_achat', 'Montant_vente'], axis=1, inplace=True)
+#
+
 
