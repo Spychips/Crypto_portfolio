@@ -98,7 +98,7 @@ df = pd.read_excel(path_to_historical_binance)\
         .rename(columns={'Date(UTC)':'Date','Order Amount':'Nb_tokens', 'AvgTrading Price':'Price_coin',\
                          'Total':'Total_price'})
 df.drop(['Order Price','status'],axis=1,inplace=True)
-df = df[df['Date'].notnull()]
+df = df[(df['Date'].notnull()) & (df['Filled']!=0)]
 df[['Nb_tokens','Price_coin']] = df[['Nb_tokens','Price_coin']].astype(float)
 
 df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')

@@ -47,7 +47,7 @@ path_to_project = r'C:\Users\ALEXIS\PycharmProjects\Crypto_portfolio'
 path_to_data = os.path.join(path_to_project,'data')
 
 #Pour l'historique de trading Binance
-binance_filename = "Exporter l'historique des ordres récents.xls"
+binance_filename = "Exporter l'historique des ordres récents.xlsx"
 path_to_historical_binance = os.path.join(r'C:\Users\ALEXIS\Downloads',binance_filename)
 filename_history_binance_post_treatments = 'history_binance_post_treatments.xlsx'
 
