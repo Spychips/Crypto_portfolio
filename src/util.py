@@ -64,9 +64,8 @@ historical_prices_filename = 'historical_prices.txt'
 path_to_historical_prices = os.path.join(path_to_data,historical_prices_filename)
 
 # Template Excel
-filename_template_excel = 'template_portfolio_v3.xlsx'
-sheetname_report = 'Report'
+filename_template_excel = 'template_portfolio_v5.xlsx'
+sheetname_report = 'Historique par crypto'
 sheetname_cours_cryptos = 'Cours_Cryptos'
-sheetname_historique_transactions = 'Historique_Cryptos'
+sheetname_historique_transactions = 'Historique des transactions'
 sheetname_deposits_euros = 'Historique_EUR'
-sheetname_report = 'Report'

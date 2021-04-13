@@ -103,11 +103,19 @@ df = pd.read_excel(path_to_historical_binance)\
                          'Total':'Total_price'})
 df.drop(['Order Price','status'],axis=1,inplace=True)
 df = df[(df['Date'].notnull()) & (df['Filled']!=0)]
-df[['Nb_tokens','Price_coin']] = df[['Nb_tokens','Price_coin']].astype(float)
+df[['Nb_tokens','Price_coin']] = df[['Nb_tokens','Price_coin']].astype(np.float64)
 
 df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
 df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin))
-df = df[df.Coin!='EUR']
+
+df = df[~df.Coin.isin(['EUR'])]
+
+# Changement pour le PUNDIX
+for i in ['Nb_tokens','Filled']:
+    df.loc[df.Coin=='NPXS',i] = df[i]/1000
+df.loc[df.Coin=='NPXS','Price_coin'] = df['Price_coin']*1000
+df.loc[df.Coin=='NPXS','Coin'] = 'PUNDIX'
+df.loc[df.Coin=='PUNDIX','Pair'] = df['Coin'] + df['Transaction_coin']
 
 df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df.Price_coin, np.NaN)
 df['Fake_transaction'] = False
@@ -142,12 +150,13 @@ df['USD_total_price'] = df['Nb_tokens']*df['USD_price_per_coin']
 # var_to_keep = ['Date','Coin','Type', 'Nb_tokens', 'USD_price_per_coin', 'USD_total_price']
 # df = df[var_to_keep]
 df.drop(['Total_price','Filled'],inplace=True, axis=1)
-df = df[~df.Coin.isin(['OST','ONT'])].sort_values(['Coin','Date']).reset_index(drop=True)
+# df = df[~df.Coin.isin(['OST','ONT'])].sort_values(['Coin','Date']).reset_index(drop=True)
+df = df.sort_values(['Coin','Date']).reset_index(drop=True)
 
 # Calcul du nombre d'achats / ventes
 df['temp'] = df.groupby(['Coin','Type']).cumcount()+1 #var temporaire
 df['Nombre_achats'] = np.where(df.Type=='BUY', df['temp'], None)
-df['Nombre_achats'] = df.groupby('Coin')['Nombre_achats'].fillna(method='ffill').astype(np.int16)
+df['Nombre_achats'] = df.groupby('Coin')['Nombre_achats'].fillna(method='ffill').fillna(0).astype(np.int16)
 df['Nombre_ventes'] = np.where(df.Type=='SELL', df['temp'], None)
 df['Nombre_ventes'] = df.groupby('Coin')['Nombre_ventes'].fillna(method='ffill').fillna(0).astype(np.int16)
 del df['temp']
@@ -223,15 +232,28 @@ df_agg['temp'] = df_agg['Coin']+'USDT'
 df_agg = pd.merge(df_agg, df_binance_cryptos[['Pair','PriceChange24hr','CurrentPrice']],left_on='temp', right_on='Pair')
 df_agg.drop(['Pair','temp'],axis=1,inplace=True)
 
+#Ajout des dates pour la première et dernière transaction
+a = pd.DataFrame(df.groupby("Coin").Date.min()).rename(columns ={'Date':'Date_min'})
+b = pd.DataFrame(df.groupby("Coin").Date.min()).rename(columns ={'Date':'Date_max'})
+df_agg = df_agg.set_index('Coin')
+df_agg = pd.concat([df_agg,a,b], axis = 1).reset_index().rename(columns ={'index':'Coin'})
+del [a,b]
+
 df_agg['Valeur_actuelle_qte_possedee'] = df_agg['Quantite_possedee_totale']*df_agg['CurrentPrice']
 df_agg['Cout_qt_possedee'] = df_agg['Quantite_possedee_totale']*df_agg['Prix_moyen_achat']
 df_agg['Variation_qt_possedee'] = df_agg['Valeur_actuelle_qte_possedee'] - df_agg['Cout_qt_possedee']
 df_agg['Variation_qt_possedee_%'] = 100*(df_agg['Valeur_actuelle_qte_possedee'] - df_agg['Cout_qt_possedee'])/df_agg['Cout_qt_possedee']
 
 var_to_keep = ['Coin', 'Variation_qt_possedee','Variation_qt_possedee_%', 'Plus_value_vente_en_$', 'CurrentPrice', 'PriceChange24hr',
-               'Prix_moyen_achat', 'Prix_moyen_vente', 'Quantite_possedee_totale', 'Nombre_achats', 'Nombre_ventes']
+               'Prix_moyen_achat', 'Prix_moyen_vente', 'Quantite_possedee_totale', 'Nombre_achats', 'Nombre_ventes','Date_min','Date_max']
 
-df_agg[var_to_keep].sort_values('Variation_qt_possedee',ascending=False).to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
+#Suppression temporaire pour la crypto OST
+df_agg = df_agg[df_agg.Coin!='OST']
+
+df_agg['temp'] = df_agg['Quantite_possedee_totale']*df_agg['CurrentPrice'] #Pour trier la table
+
+df_agg.sort_values('temp',ascending=False)[var_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
+
 
 # ########################################################################### #
 # Enregistrement du fichier Excel
