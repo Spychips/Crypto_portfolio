@@ -3,7 +3,6 @@
 # avec mise en forme du fichier Excel et calculs d'agrégats
 # ############################################################ #
 
-import pandas as pd
 from src.util import *
 import requests
 import pandas as pd
@@ -63,6 +62,15 @@ df_binance_cryptos[['PriceChange24hr','CurrentPrice']] = df_binance_cryptos[['Pr
 
 df_binance_cryptos['Coin'], df_binance_cryptos['Transaction_coin'] = zip(*df_binance_cryptos.Pair.apply(extract_transaction_coin))
 
+OSTPair = 'OSTUSDT'
+OSTCoin = 'OST'
+OSTTransaction_coin = 'USDT'
+OSTCurrentPrice = df_binance_cryptos.loc[df_binance_cryptos['Pair']=='OSTBTC','CurrentPrice'].values*df_binance_cryptos.loc[df_binance_cryptos['Pair']=='BTCUSDT','CurrentPrice'].values
+OSTPriceChange = df_binance_cryptos.loc[df_binance_cryptos['Pair']=='OSTBTC','PriceChange24hr'].values*df_binance_cryptos.loc[df_binance_cryptos['Pair']=='BTCUSDT','PriceChange24hr'].values
+
+ost_df = pd.DataFrame({'Pair':OSTPair,'Coin':OSTCoin,'Transaction_coin':OSTTransaction_coin,'CurrentPrice':OSTCurrentPrice,'PriceChange24hr':OSTPriceChange})
+df_binance_cryptos = pd.concat([df_binance_cryptos,ost_df], axis=0).reset_index(drop=True)
+
 # --------------------------------------------------------------------------- #
 # Ajout dans l'onglet
 # --------------------------------------------------------------------------- #
@@ -101,6 +109,7 @@ df_historical_prices['Date'] = pd.to_datetime(df_historical_prices['Date'],forma
 df = pd.read_excel(path_to_historical_binance)\
         .rename(columns={'Date(UTC)':'Date','Order Amount':'Nb_tokens', 'AvgTrading Price':'Price_coin',\
                          'Total':'Total_price'})
+df = df[df.status=="Filled"]
 df.drop(['Order Price','status'],axis=1,inplace=True)
 df = df[(df['Date'].notnull()) & (df['Filled']!=0)]
 df[['Nb_tokens','Price_coin']] = df[['Nb_tokens','Price_coin']].astype(np.float64)
@@ -109,6 +118,9 @@ df['Date'] = pd.to_datetime(df['Date'],format='%Y-%m-%d %H:%M:%S')
 df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin))
 
 df = df[~df.Coin.isin(['EUR'])]
+
+# Ajout manuel de l'achat d'ATOM
+
 
 # Changement pour le PUNDIX
 for i in ['Nb_tokens','Filled']:
@@ -248,7 +260,7 @@ var_to_keep = ['Coin', 'Variation_qt_possedee','Variation_qt_possedee_%', 'Plus_
                'Prix_moyen_achat', 'Prix_moyen_vente', 'Quantite_possedee_totale', 'Nombre_achats', 'Nombre_ventes','Date_min','Date_max']
 
 #Suppression temporaire pour la crypto OST
-df_agg = df_agg[df_agg.Coin!='OST']
+#df_agg = df_agg[df_agg.Coin!='OST']
 
 df_agg['temp'] = df_agg['Quantite_possedee_totale']*df_agg['CurrentPrice'] #Pour trier la table
 
