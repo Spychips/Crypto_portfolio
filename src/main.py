@@ -34,7 +34,7 @@ print('\n==========================================')
 print('CREATION DU REPORTING DU JOUR MIS EN FORME')
 print('==========================================\n')
 
-writer = pd.ExcelWriter(os.path.join(path_to_data,'Suivi_portefeuille_{}.xlsx'.format(date_jour)),engine='openpyxl')
+writer = pd.ExcelWriter(os.path.join(path_to_data,'Suivis_portefeuille/Suivi_portefeuille_{}.xlsx'.format(date_jour)),engine='openpyxl')
 writer.book = book
 
 # #Rename onglet "Statistiques_YYYYMMDD" :
