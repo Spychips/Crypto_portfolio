@@ -7,7 +7,7 @@ from src.util import *
 import requests
 import pandas as pd
 from openpyxl import load_workbook
-from datetime import date
+from datetime import date, datetime
 import numpy as np
 
 date_jour = date.today().strftime('%Y%m%d')
@@ -119,8 +119,19 @@ df['Coin'], df['Transaction_coin'] = zip(*df.Pair.apply(extract_transaction_coin
 
 df = df[~df.Coin.isin(['EUR'])]
 
-# Ajout manuel de l'achat d'ATOM
+# Ajout manuel ATOM
+atom = pd.DataFrame([datetime.strptime('15/03/2021 10:22:53','%d/%m/%Y %H:%M:%S'),'ATOMUSDT',"BUY",2.76,18.95,2.76,round(2.76*18.95,5),"ATOM","USDT"]).T.infer_objects()
+atom.columns = df.columns
 
+# Ajout manuel CHZ
+chz = pd.DataFrame([datetime.strptime('04/04/2021 22:17:57','%d/%m/%Y %H:%M:%S'),'CHZBNB',"SELL",72.1,0.09826/72.1,72.1,0.09826,"CHZ","BNB"]).T.infer_objects()
+chz.columns = df.columns
+
+# Ajout manuel RAMP
+ramp = pd.DataFrame([datetime.strptime('04/04/2021 22:17:57','%d/%m/%Y %H:%M:%S'),'RAMPBNB',"SELL",8.46,0.01525424/8.46,8.46,0.01525424,"RAMP","BNB"]).T.infer_objects()
+ramp.columns = df.columns
+
+df = pd.concat([df,atom,chz,ramp],axis=0).sort_values('Date').reset_index(drop=True)
 
 # Changement pour le PUNDIX
 for i in ['Nb_tokens','Filled']:
@@ -138,7 +149,7 @@ df_fake_transactions['Date'] = df_fake_transactions['Date'] - pd.Timedelta(1,uni
 df_fake_transactions['Pair'] = df_fake_transactions['Transaction_coin']+'USDT'
 df_fake_transactions['Coin'] = df_fake_transactions['Transaction_coin']
 df_fake_transactions['Transaction_coin'] = 'USDT'
-df_fake_transactions['Type'] = 'SELL'
+df_fake_transactions['Type'] = np.where(df_fake_transactions['Type']=='SELL','BUY','SELL')
 df_fake_transactions['Fake_transaction'] = True
 df_fake_transactions['Nb_tokens'], df_fake_transactions['Filled'] = df_fake_transactions['Total_price'], df_fake_transactions['Total_price']
 df_fake_transactions['Price_coin'], df_fake_transactions['Total_price'] = np.NaN, np.NaN
@@ -192,6 +203,8 @@ df['Quantite_achetee_totale'] = df.groupby('Coin').Quantite_achetee_totale.filln
 df['Quantite_vendue_totale'] = df.groupby('Coin').Quantite_vendue.cumsum()
 df['Quantite_vendue_totale'] = df.groupby('Coin').Quantite_vendue_totale.fillna(method='ffill').fillna(0)
 
+
+
 # Quantité possédée totale jusqu'à date
 df['Quantite_possedee_totale'] = df['Quantite_achetee_totale'] - df['Quantite_vendue_totale']
 
@@ -209,7 +222,8 @@ df['Prix_moyen_vente'] = df['Montant_vente_total']/df['Quantite_vendue_totale']
 
 # Calcul de la plus value réalisée en vendant
 df['temp'] = ((df['Prix_vente'] - df['Prix_moyen_achat'])*df['Quantite_vendue'])
-df['Plus_value_vente_en_$'] = df.groupby('Coin')['temp'].cumsum().fillna(method='ffill').fillna(0)
+df['Plus_value_vente_en_$'] = df.groupby('Coin')['temp'].cumsum()
+df['Plus_value_vente_en_$'] = df.groupby('Coin')["Plus_value_vente_en_$"].fillna(method='ffill').fillna(0)
 del df['temp']
 
 # # Suppression de champs
@@ -263,9 +277,16 @@ var_to_keep = ['Coin', 'Variation_qt_possedee','Variation_qt_possedee_%', 'Plus_
 #df_agg = df_agg[df_agg.Coin!='OST']
 
 df_agg['temp'] = df_agg['Quantite_possedee_totale']*df_agg['CurrentPrice'] #Pour trier la table
-
 df_agg.sort_values('temp',ascending=False)[var_to_keep].to_excel(writer,sheetname_report,startcol=0,startrow=1,index=False,header=False)
 
+# ########################################################################### #
+# Onglet vision agrégée par crypto sans les cryptos avec quantité très proche de zéro
+# ########################################################################### #
+
+df_agg[df_agg.temp>=1].sort_values('temp',ascending=False)[var_to_keep].to_excel(writer,"hidden_sheet",startcol=0,startrow=0,index=False,header=True)
+ws = book["hidden_sheet"]
+
+ws.sheet_state = 'hidden'
 
 # ########################################################################### #
 # Enregistrement du fichier Excel
