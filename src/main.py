@@ -62,6 +62,7 @@ df_binance_cryptos[['PriceChange24hr','CurrentPrice']] = df_binance_cryptos[['Pr
 
 df_binance_cryptos['Coin'], df_binance_cryptos['Transaction_coin'] = zip(*df_binance_cryptos.Pair.apply(extract_transaction_coin))
 
+#Pour récupérer le cours pour l'OST
 OSTPair = 'OSTUSDT'
 OSTCoin = 'OST'
 OSTTransaction_coin = 'USDT'
@@ -144,6 +145,9 @@ df['USD_price_per_coin'] = np.where(df.Transaction_coin.isin(['USDT','USD']), df
 df['Fake_transaction'] = False
 
 #Ajout de "fake" transactions pour les transactions avec Transaction_coin <> USD, USDT
+"""
+Par exemple, si achat en BTC, ajouter une ligne comme si on avait vendu du BTC contre de l'USDT
+"""
 df_fake_transactions = df[df.Transaction_coin!='USDT'].copy()
 df_fake_transactions['Date'] = df_fake_transactions['Date'] - pd.Timedelta(1,unit='s')
 df_fake_transactions['Pair'] = df_fake_transactions['Transaction_coin']+'USDT'

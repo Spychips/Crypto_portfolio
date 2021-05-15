@@ -2,6 +2,7 @@ import re
 import os
 import pickle
 import pandas as pd
+import platform
 
 # Fonction pour split COIN et Transaction coin (Ex : ETHUSDT -> ETH et USDT)
 def extract_transaction_coin(value):
@@ -43,20 +44,26 @@ def rolling_calculation(df_Init, index_str, var_group_str, agg_str, rolling_delt
     df_result = pd.concat([df_Init, rolling], axis=1)
     return rolling, df_result
 
-path_to_project = r'C:\Users\ALEXIS\PycharmProjects\Crypto_portfolio'
-path_to_data = os.path.join(path_to_project,'data')
+path_to_project = r'/Users/spychips/PycharmProjects/Crypto_portfolio'
+path_to_data = os.path.join(path_to_project, 'data')
 
 #Pour l'historique de trading Binance
-binance_filename = "Exporter l'historique des ordres récents.xlsx"
-path_to_historical_binance = os.path.join(r'C:\Users\ALEXIS\Downloads',binance_filename)
+binance_filename = "Exporter l'historique des ordres.xlsx"
+if platform.system=="Darwin":
+    path_to_historical_binance = os.path.join(r'/Users/spychips/Downloads',binance_filename)
+if platform.system=="Windows":
+    path_to_historical_binance = os.path.join(r'C:\Users\ALEXIS\Downloads', binance_filename)
 filename_history_binance_post_treatments = 'history_binance_post_treatments.xlsx'
 
 # Pour enregistrer les prix actuels (en USDT, ETH, BTC, EUR) de toutes les cryptos dispo sur Binance
 filename_current_prices_all_binance_cryptos = "current_prices_binance_cryptos.sav"
 
 #Pour l'historique de transferts d'€ sur Binance
-binance_deposits = "Exporter l'historique des dépôts.xlsx"
-path_to_deposits_binance = os.path.join(r'C:\Users\ALEXIS\Downloads',binance_deposits)
+binance_deposits = "Exporter l'historique des dépôts.xlsx"
+if platform.system=="Darwin":
+    path_to_deposits_binance = os.path.join(r'/Users/spychips/Downloads',binance_deposits)
+if platform.system=="Windows":
+    path_to_deposits_binance = os.path.join(r'C:\Users\ALEXIS\Downloads', binance_deposits)
 filename_deposits_binance_post_treatments = 'deposits_binance_post_treatments.xlsx'
 
 # Pour les prix ETH, BTC
