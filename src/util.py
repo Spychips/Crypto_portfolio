@@ -49,9 +49,9 @@ path_to_data = os.path.join(path_to_project, 'data')
 
 #Pour l'historique de trading Binance
 binance_filename = "Exporter l'historique des ordres.xlsx"
-if platform.system=="Darwin":
+if platform.system()=="Darwin":
     path_to_historical_binance = os.path.join(r'/Users/spychips/Downloads',binance_filename)
-if platform.system=="Windows":
+if platform.system()=="Windows":
     path_to_historical_binance = os.path.join(r'C:\Users\ALEXIS\Downloads', binance_filename)
 filename_history_binance_post_treatments = 'history_binance_post_treatments.xlsx'
 
@@ -60,9 +60,9 @@ filename_current_prices_all_binance_cryptos = "current_prices_binance_cryptos.sa
 
 #Pour l'historique de transferts d'€ sur Binance
 binance_deposits = "Exporter l'historique des dépôts.xlsx"
-if platform.system=="Darwin":
+if platform.system()=="Darwin":
     path_to_deposits_binance = os.path.join(r'/Users/spychips/Downloads',binance_deposits)
-if platform.system=="Windows":
+if platform.system()=="Windows":
     path_to_deposits_binance = os.path.join(r'C:\Users\ALEXIS\Downloads', binance_deposits)
 filename_deposits_binance_post_treatments = 'deposits_binance_post_treatments.xlsx'
 
