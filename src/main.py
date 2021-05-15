@@ -264,7 +264,7 @@ df_agg.drop(['Pair','temp'],axis=1,inplace=True)
 
 #Ajout des dates pour la première et dernière transaction
 a = pd.DataFrame(df.groupby("Coin").Date.min()).rename(columns ={'Date':'Date_min'})
-b = pd.DataFrame(df.groupby("Coin").Date.min()).rename(columns ={'Date':'Date_max'})
+b = pd.DataFrame(df.groupby("Coin").Date.max()).rename(columns ={'Date':'Date_max'})
 df_agg = df_agg.set_index('Coin')
 df_agg = pd.concat([df_agg,a,b], axis = 1).reset_index().rename(columns ={'index':'Coin'})
 del [a,b]
